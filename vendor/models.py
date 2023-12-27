@@ -85,3 +85,17 @@ class OpeningHour(models.Model):
 
     def __str__(self):
         return self.get_day_display()
+    
+class OpeningHour(models.Model):
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE)
+    day = models.IntegerField(choices=DAYS)
+    from_hour = models.CharField(choices=HOUR_OF_DAY_24, max_length=10, blank=True)
+    to_hour = models.CharField(choices=HOUR_OF_DAY_24, max_length=10, blank=True)
+    is_closed = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ('day', '-from_hour')
+        unique_together = ('vendor', 'day', 'from_hour', 'to_hour')
+
+    def __str__(self):
+        return self.get_day_display()
