@@ -16,18 +16,18 @@ from django.contrib.gis.measure import D # ``D`` is a shortcut for ``Distance``
 from django.contrib.gis.db.models.functions import Distance
 
 from datetime import date, datetime
+from orders.forms import OrderForm
 
-
-# Create your views here.
 
 def marketplace(request):
     vendors = Vendor.objects.filter(is_approved=True, user__is_active=True)
     vendor_count = vendors.count()
-    context={
+    context = {
         'vendors': vendors,
         'vendor_count': vendor_count,
     }
     return render(request, 'marketplace/listings.html', context)
+
 
 def vendor_detail(request, vendor_slug):
     vendor = get_object_or_404(Vendor, vendor_slug=vendor_slug)
@@ -58,6 +58,7 @@ def vendor_detail(request, vendor_slug):
         'current_opening_hours': current_opening_hours,
     }
     return render(request, 'marketplace/vendor_detail.html', context)
+
 
 def add_to_cart(request, food_id):
     if request.user.is_authenticated:
@@ -110,7 +111,8 @@ def decrease_cart(request, food_id):
         
     else:
         return JsonResponse({'status': 'login_required', 'message': 'Please login to continue'})
-    
+
+
 @login_required(login_url = 'login')
 def cart(request):
     cart_items = Cart.objects.filter(user=request.user).order_by('created_at')
@@ -118,6 +120,7 @@ def cart(request):
         'cart_items': cart_items,
     }
     return render(request, 'marketplace/cart.html', context)
+
 
 def delete_cart(request, cart_id):
     if request.user.is_authenticated:
@@ -132,6 +135,7 @@ def delete_cart(request, cart_id):
                 return JsonResponse({'status': 'Failed', 'message': 'Cart Item does not exist!'})
         else:
             return JsonResponse({'status': 'Failed', 'message': 'Invalid request!'})
+
 
 def search(request):
     if not 'address' in request.GET:
@@ -165,3 +169,30 @@ def search(request):
 
 
         return render(request, 'marketplace/listings.html', context)
+
+
+@login_required(login_url='login')
+def checkout(request):
+    cart_items = Cart.objects.filter(user=request.user).order_by('created_at')
+    cart_count = cart_items.count()
+    if cart_count <= 0:
+        return redirect('marketplace')
+    
+    user_profile = UserProfile.objects.get(user=request.user)
+    default_values = {
+        'first_name': request.user.first_name,
+        'last_name': request.user.last_name,
+        'phone': request.user.phone_number,
+        'email': request.user.email,
+        'address': user_profile.address,
+        'country': user_profile.country,
+        'state': user_profile.state,
+        'city': user_profile.city,
+        'pin_code': user_profile.pin_code,
+    }
+    form = OrderForm(initial=default_values)
+    context = {
+        'form': form,
+        'cart_items': cart_items,
+    }
+    return render(request, 'marketplace/checkout.html', context)
